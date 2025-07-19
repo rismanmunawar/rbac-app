@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::create('activity_logs', function (Blueprint $table) {
             $table->id();
-            $table->string('action');
-            $table->string('description')->nullable();
-            $table->json('properties')->nullable(); // before/after data
-            $table->nullableMorphs('subject'); // subject_type & subject_id (misalnya: User, Role, Permission)
-            $table->foreignId('causer_id')->nullable()->constrained('users')->nullOnDelete(); // pelaku
-            $table->string('ip_address')->nullable();
+            $table->foreignId('causer_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('action'); // contoh: 'create_user'
+            $table->string('description')->nullable(); // penjelasan opsional
+            $table->json('properties')->nullable(); // data before/after
+            $table->string('subject_type')->nullable(); // model yang diubah
+            $table->unsignedBigInteger('subject_id')->nullable(); // id dari model yang diubah
             $table->timestamps();
         });
     }

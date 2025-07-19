@@ -7,19 +7,35 @@ use Illuminate\Support\Facades\Auth;
 
 class AuditHelper
 {
-    public static function log($action, $description = '', $properties = [], $subject = null)
+    public static function log(string $action, string $description = null, array $properties = [], $subject = null): void
     {
-        $log = new ActivityLog();
-        $log->causer_id = Auth::id();
-        $log->action = $action;
-        $log->description = $description;
-        $log->properties = $properties;
+        $changes = [];
 
-        if ($subject) {
-            $log->subject_type = get_class($subject);
-            $log->subject_id = $subject->id;
+        if (isset($properties['before']) && isset($properties['after'])) {
+            $before = $properties['before'];
+            $after = $properties['after'];
+
+            foreach ($after as $key => $value) {
+                $old = $before[$key] ?? null;
+                if ($old != $value) {
+                    $changes[$key] = [
+                        'before' => $old ?? '',
+                        'after' => $value ?? '',
+                    ];
+                }
+            }
+
+            // tambahkan ke properties
+            $properties['changes'] = $changes;
         }
 
-        $log->save();
+        ActivityLog::create([
+            'causer_id'    => Auth::id(),
+            'action'       => $action,
+            'description'  => $description,
+            'properties'   => $properties,
+            'subject_type' => $subject ? get_class($subject) : null,
+            'subject_id'   => $subject?->id,
+        ]);
     }
 }

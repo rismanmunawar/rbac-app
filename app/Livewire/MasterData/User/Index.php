@@ -23,11 +23,12 @@ class Index extends Component
     public $allPermissions = [];
     public $userPermissions = [];
     public $showPermissionModal = false;
-    public $logModal = false;
-    public $logDetails = [];
-
+    public bool $logModal = false;
+    public array $logDetails = [];
     protected $paginationTheme = 'tailwind';
-
+    public $showUserDetailModal = false;
+    public $selectedUserDetail;
+    public $lastUserLog;
     protected function rules()
     {
         return [
@@ -69,7 +70,7 @@ class Index extends Component
             'email',
             'password',
             'role',
-            'is_active',
+            'is_active'
         ]);
     }
 
@@ -78,10 +79,7 @@ class Index extends Component
         $this->validate();
 
         $isNew = !$this->userId;
-
         $user = $isNew ? new User : User::findOrFail($this->userId);
-        $oldData = $user->exists ? $user->toArray() : [];
-
         $user->name = $this->name;
         $user->email = $this->email;
         $user->is_active = $this->is_active;
@@ -95,10 +93,10 @@ class Index extends Component
 
         AuditHelper::log(
             $isNew ? 'create_user' : 'update_user',
-            ($isNew ? 'Menambahkan' : 'Memperbarui') . ' user ID: ' . $user->id,
+            'User ' . ($isNew ? 'ditambahkan' : 'diperbarui') . ' ID ' . $user->id,
             [
-                'before' => $isNew ? null : $oldData,
-                'after' => $user->toArray()
+                // 'before' => $oldData, // Uncomment jika butuh log perubahan detail
+                // 'after' => $user->toArray(),
             ],
             $user
         );
@@ -110,16 +108,13 @@ class Index extends Component
     public function delete($id)
     {
         $user = User::findOrFail($id);
-
         AuditHelper::log(
             'delete_user',
             'Menghapus user ID ' . $user->id,
             ['data' => $user->toArray()],
             $user
         );
-
         $user->delete();
-
         $this->dispatch('showSuccess', 'User dihapus.');
     }
 
@@ -158,36 +153,67 @@ class Index extends Component
             ->with('roles')
             ->paginate(10);
 
+        foreach ($users as $user) {
+            $lastLog = ActivityLog::where('subject_type', User::class)
+                ->where('subject_id', $user->id)
+                ->latest()
+                ->first();
+
+            $user->modified_by = optional($lastLog?->causer)->name;
+            $user->modified_at = optional($lastLog)->created_at;
+        }
+
         return view('livewire.master-data.user.index', compact('users'));
     }
 
-    public function showLogDetail($userId)
+    // Optional: Uncomment jika nanti butuh lihat detail log
+    // public function showLogDetail($userId)
+    // {
+    //     $lastLog = ActivityLog::where('subject_type', User::class)
+    //         ->where('subject_id', $userId)
+    //         ->latest()
+    //         ->first();
+
+    //     if ($lastLog) {
+    //         $this->logDetails = [
+    //             'created_at' => $lastLog->created_at->format('d M Y H:i'),
+    //             'causer'     => optional($lastLog->causer)->name,
+    //             'action'     => $lastLog->action,
+    //             'changes'    => $this->diffChanges($lastLog->properties),
+    //         ];
+    //         $this->logModal = true;
+    //     }
+    // }
+
+    // private function diffChanges($properties)
+    // {
+    //     $before = $properties['before'] ?? [];
+    //     $after = $properties['after'] ?? [];
+
+    //     $changes = [];
+    //     foreach ($after as $key => $value) {
+    //         $old = $before[$key] ?? null;
+    //         if ($old != $value) {
+    //             $changes[$key] = [
+    //                 'before' => $old ?? '',
+    //                 'after' => $value ?? '',
+    //             ];
+    //         }
+    //     }
+
+    //     return $changes;
+    // }
+
+    public function showUserDetail($id)
     {
-        $log = ActivityLog::where('subject_type', User::class)
-            ->where('subject_id', $userId)
+        $this->selectedUserDetail = \App\Models\User::with('roles')->findOrFail($id);
+
+        $this->lastUserLog = \App\Models\ActivityLog::where('subject_type', \App\Models\User::class)
+            ->where('subject_id', $id)
             ->where('action', 'like', 'update_user%')
             ->latest()
             ->first();
 
-        if ($log) {
-            $changes = [];
-            foreach (($log->properties['after'] ?? []) as $key => $newValue) {
-                $oldValue = $log->properties['before'][$key] ?? '';
-                if ($oldValue != $newValue) {
-                    $changes[$key] = ['before' => $oldValue, 'after' => $newValue];
-                }
-            }
-
-            $this->logDetails = [
-                'created_at' => $log->created_at->format('d M Y H:i'),
-                'causer' => $log->causer?->name ?? '-',
-                'action' => $log->action,
-                'changes' => $changes,
-            ];
-        } else {
-            $this->logDetails = null;
-        }
-
-        $this->logModal = true;
+        $this->showUserDetailModal = true;
     }
 }

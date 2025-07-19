@@ -1,25 +1,32 @@
 <?php
-// app/Models/ActivityLog.php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityLog extends Model
 {
-    protected $fillable = ['action', 'description', 'properties', 'causer_id', 'ip_address'];
+    protected $fillable = [
+        'causer_id',
+        'action',
+        'description',
+        'properties',
+        'subject_type',
+        'subject_id'
+    ];
 
     protected $casts = [
         'properties' => 'array',
     ];
 
-    public function subject(): MorphTo
-    {
-        return $this->morphTo();
-    }
-
-    public function causer()
+    public function causer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'causer_id');
+    }
+
+    public function subject()
+    {
+        return $this->morphTo(null, 'subject_type', 'subject_id');
     }
 }
