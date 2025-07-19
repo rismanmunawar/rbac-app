@@ -1,5 +1,5 @@
 <div class="p-4 space-y-4">
-    {{-- Header: Search dan Tombol Tambah --}}
+    {{-- Header --}}
     <div class="flex justify-between items-center">
         <div class="relative w-full max-w-md">
             <input type="text" wire:model.live="search" placeholder="Cari role..."
@@ -10,13 +10,14 @@
                     d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.6 3.6a7.5 7.5 0 0013.05 13.05z" />
             </svg>
         </div>
-
-        <button wire:click="openModal" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-            + Tambah
-        </button>
+        @can('roles.create')
+            <button wire:click="openModal" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                + Tambah
+            </button>
+        @endcan
     </div>
 
-    {{-- Tabel --}}
+    {{-- Table --}}
     <div class="overflow-auto bg-white dark:bg-gray-900 shadow rounded-xl">
         <table class="w-full text-sm text-left">
             <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 uppercase">
@@ -27,18 +28,26 @@
             </thead>
             <tbody>
                 @forelse ($roles as $role)
-                <tr class="border-t border-gray-200 dark:border-gray-700">
-                    <td class="px-4 py-2">{{ $role->name }}</td>
-                    <td class="px-4 py-2 space-x-2">
-                        <button wire:click="openModal({{ $role->id }})" class="text-blue-600 dark:text-blue-400">Edit</button>
-                        <button wire:click="delete({{ $role->id }})" class="text-red-600 dark:text-red-400"
-                            onclick="return confirm('Yakin ingin hapus role ini?')">Hapus</button>
-                    </td>
-                </tr>
+                    <tr class="border-t border-gray-200 dark:border-gray-700">
+                        <td class="px-4 py-2">{{ $role->name }}</td>
+                        <td class="px-4 py-2 space-x-2">
+                            @can('roles.update')
+                                <button wire:click="openModal({{ $role->id }})"
+                                    class="text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
+                            @endcan
+
+                            @can('roles.delete')
+                                <button wire:click="delete({{ $role->id }})"
+                                    onclick="return confirm('Yakin ingin hapus role ini?')"
+                                    class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
+                            @endcan
+                        </td>
+
+                    </tr>
                 @empty
-                <tr>
-                    <td colspan="2" class="px-4 py-2 text-center text-gray-500">Tidak ada data</td>
-                </tr>
+                    <tr>
+                        <td colspan="2" class="px-4 py-2 text-center text-gray-500">Tidak ada data</td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -48,59 +57,88 @@
     <div>{{ $roles->links() }}</div>
 
     {{-- Modal --}}
-    @if($modalOpen)
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-300">
-        <div class="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md space-y-6 shadow-xl transform scale-100 transition duration-300">
-            <div class="flex items-center gap-2 text-xl font-semibold text-gray-800 dark:text-white">
-                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"
-                    viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M16 7a4 4 0 00-8 0v4a4 4 0 008 0V7z" />
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M12 17v1m0 4h.01M12 21c-4.418 0-8-1.79-8-4V9a8 8 0 0116 0v8c0 2.21-3.582 4-8 4z" />
-                </svg>
-                {{ $roleId ? 'Edit Role' : 'Tambah Role' }}
+    @if ($modalOpen)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-4xl shadow-xl overflow-hidden space-y-6">
+                <div class="text-2xl font-semibold text-gray-800 dark:text-white">
+                    {{ $roleId ? 'Edit Role' : 'Tambah Role' }}
+                </div>
+
+                <form wire:submit.prevent="save" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Role</label>
+                        <input type="text" wire:model.defer="name"
+                            class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        @error('name')
+                            <span class="text-sm text-red-500 mt-1">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Permissions</label>
+                        <div
+                            class="space-y-6 max-h-[400px] overflow-y-auto border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                            @foreach ($permissions as $module => $modulePermissions)
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="font-semibold text-sm text-blue-600 uppercase">
+                                            {{ ucfirst($module) }}
+                                        </span>
+                                        <label class="text-xs text-gray-600 dark:text-gray-300 space-x-1">
+                                            <input type="checkbox" wire:model="selectAll.{{ $module }}"
+                                                wire:change="toggleSelectAll('{{ $module }}')"
+                                                class="rounded text-blue-600">
+                                            <span>Pilih Semua</span>
+                                        </label>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                        @foreach ($modulePermissions as $permission)
+                                            <label
+                                                class="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-200">
+                                                <input type="checkbox" wire:model.defer="selectedPermissions"
+                                                    value="{{ $permission }}"
+                                                    class="rounded text-blue-600 focus:ring-blue-500">
+                                                <span>{{ str_replace($module . '.', '', $permission) }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3">
+                        <button type="button" wire:click="closeModal"
+                            class="px-4 py-2 border text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                            Batal
+                        </button>
+                        <button type="submit"
+                            class="px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                            Simpan
+                        </button>
+                    </div>
+                </form>
             </div>
-
-            <form wire:submit.prevent="save" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Role</label>
-                    <input type="text" wire:model.defer="name"
-                        class="mt-1 w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    @error('name') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                </div>
-
-                <div class="flex justify-end gap-2 pt-4">
-                    <button wire:click="closeModal" type="button"
-                        class="px-4 py-2 text-gray-700 dark:text-gray-300 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                        Batal
-                    </button>
-                    <button type="submit"
-                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-                        Simpan
-                    </button>
-                </div>
-            </form>
         </div>
-    </div>
     @endif
 
-    {{-- SweetAlert --}}
     @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        Livewire.on('showSuccess', message => {
-            Swal.fire({
-                icon: 'success',
-                title: 'Berhasil',
-                text: message,
-                toast: true,
-                position: 'top-end',
-                timer: 3000,
-                showConfirmButton: false,
-                timerProgressBar: true,
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            Livewire.on('showSuccess', message => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: message,
+                    toast: true,
+                    position: 'top-end',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    timerProgressBar: true,
+                });
             });
-        });
-    </script>
+        </script>
     @endpush
 </div>

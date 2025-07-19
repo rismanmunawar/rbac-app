@@ -25,10 +25,14 @@ class Index extends Component
     public $showPermissionModal = false;
     public bool $logModal = false;
     public array $logDetails = [];
-    protected $paginationTheme = 'tailwind';
     public $showUserDetailModal = false;
     public $selectedUserDetail;
     public $lastUserLog;
+    public array $directPermissions = [];
+    public array $rolePermissions = [];
+
+    protected $paginationTheme = 'tailwind';
+
     protected function rules()
     {
         return [
@@ -89,15 +93,14 @@ class Index extends Component
         }
 
         $user->save();
+
+        $user->syncPermissions([]); // Clear old direct permissions
         $user->syncRoles([$this->role]);
 
         AuditHelper::log(
             $isNew ? 'create_user' : 'update_user',
             'User ' . ($isNew ? 'ditambahkan' : 'diperbarui') . ' ID ' . $user->id,
-            [
-                // 'before' => $oldData, // Uncomment jika butuh log perubahan detail
-                // 'after' => $user->toArray(),
-            ],
+            [],
             $user
         );
 
@@ -121,26 +124,83 @@ class Index extends Component
     public function openPermissionModal($id)
     {
         $user = User::findOrFail($id);
+        $user->load('roles.permissions', 'permissions');
         $this->userId = $user->id;
-        $this->allPermissions = Permission::pluck('name')->toArray();
-        $this->userPermissions = $user->getPermissionNames()->toArray();
+
+        $permissions = Permission::all();
+        $grouped = [];
+
+        foreach ($permissions as $perm) {
+            $module = explode('.', $perm->name)[0] ?? 'other';
+            $grouped[$module][] = $perm->name;
+        }
+
+        $this->allPermissions = $grouped;
+
+        $this->rolePermissions = [];
+        foreach ($user->roles as $role) {
+            $this->rolePermissions = array_merge(
+                $this->rolePermissions,
+                $role->permissions->pluck('name')->toArray()
+            );
+        }
+
+        $this->rolePermissions = array_unique($this->rolePermissions);
+        $this->directPermissions = $user->getDirectPermissions()->pluck('name')->toArray();
+
+        // Combine both to show as checked in UI
+        $this->userPermissions = array_unique(array_merge($this->rolePermissions, $this->directPermissions));
+
         $this->showPermissionModal = true;
     }
 
     public function savePermissions()
     {
         $user = User::findOrFail($this->userId);
-        $user->syncPermissions($this->userPermissions);
+
+        // Ambil semua yang dicentang, lalu ambil yang bukan dari role
+        $selectedPermissions = is_array($this->userPermissions) ? $this->userPermissions : [];
+
+        $directOnly = array_filter($selectedPermissions, function ($perm) {
+            return !in_array($perm, $this->rolePermissions);
+        });
+
+        $user->syncPermissions($directOnly);
 
         AuditHelper::log(
             'update_user_permissions',
             'Memperbarui permission user ID ' . $user->id,
-            ['permissions' => $this->userPermissions],
+            ['permissions' => $directOnly],
             $user
         );
 
         $this->showPermissionModal = false;
         $this->dispatch('showSuccess', 'Permission user diperbarui.');
+    }
+
+    public function toggleModulePermissions($module, $checked)
+    {
+        $permissions = collect($this->allPermissions[$module] ?? []);
+
+        $this->directPermissions = is_array($this->directPermissions) ? $this->directPermissions : [];
+        $current = $this->directPermissions;
+
+        if ($checked) {
+            foreach ($permissions as $perm) {
+                if (!in_array($perm, $this->rolePermissions) && !in_array($perm, $current)) {
+                    $current[] = $perm;
+                }
+            }
+        } else {
+            $current = array_filter($current, function ($perm) use ($permissions) {
+                return !in_array($perm, $permissions->toArray());
+            });
+        }
+
+        $this->directPermissions = array_values($current);
+
+        // Update untuk checkbox tampil
+        $this->userPermissions = array_unique(array_merge($this->rolePermissions, $this->directPermissions));
     }
 
     public function render()
@@ -166,54 +226,31 @@ class Index extends Component
         return view('livewire.master-data.user.index', compact('users'));
     }
 
-    // Optional: Uncomment jika nanti butuh lihat detail log
-    // public function showLogDetail($userId)
-    // {
-    //     $lastLog = ActivityLog::where('subject_type', User::class)
-    //         ->where('subject_id', $userId)
-    //         ->latest()
-    //         ->first();
-
-    //     if ($lastLog) {
-    //         $this->logDetails = [
-    //             'created_at' => $lastLog->created_at->format('d M Y H:i'),
-    //             'causer'     => optional($lastLog->causer)->name,
-    //             'action'     => $lastLog->action,
-    //             'changes'    => $this->diffChanges($lastLog->properties),
-    //         ];
-    //         $this->logModal = true;
-    //     }
-    // }
-
-    // private function diffChanges($properties)
-    // {
-    //     $before = $properties['before'] ?? [];
-    //     $after = $properties['after'] ?? [];
-
-    //     $changes = [];
-    //     foreach ($after as $key => $value) {
-    //         $old = $before[$key] ?? null;
-    //         if ($old != $value) {
-    //             $changes[$key] = [
-    //                 'before' => $old ?? '',
-    //                 'after' => $value ?? '',
-    //             ];
-    //         }
-    //     }
-
-    //     return $changes;
-    // }
-
     public function showUserDetail($id)
     {
-        $this->selectedUserDetail = \App\Models\User::with('roles')->findOrFail($id);
+        $this->selectedUserDetail = User::with('roles')->findOrFail($id);
 
-        $this->lastUserLog = \App\Models\ActivityLog::where('subject_type', \App\Models\User::class)
+        $this->lastUserLog = ActivityLog::where('subject_type', User::class)
             ->where('subject_id', $id)
             ->where('action', 'like', 'update_user%')
             ->latest()
             ->first();
 
         $this->showUserDetailModal = true;
+    }
+
+    public function toggleActive($userId)
+    {
+        $user = User::findOrFail($userId);
+        $user->is_active = !$user->is_active;
+        $user->save();
+
+        AuditHelper::log(
+            action: 'toggle_user_active',
+            description: 'Toggle status aktif user',
+            subject: $user,
+        );
+
+        $this->dispatch('showSuccess', 'Status user berhasil diperbarui.');
     }
 }

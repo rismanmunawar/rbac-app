@@ -10,15 +10,20 @@ use Illuminate\Support\Facades\File;
 class Index extends Component
 {
     use WithPagination;
-
+    public $availableModels = [];
     public $search = '';
     public $selectedIds = [];
     public $selectAll = false;
     public $moduleName = '';
     protected $listeners = ['deleteConfirmed' => 'delete'];
-
+    public $showAddModal = false;
+    public $manualName;
     protected $paginationTheme = 'tailwind';
 
+    public function mount()
+    {
+        $this->loadAvailableModels();
+    }
     protected function rules()
     {
         return [
@@ -66,6 +71,15 @@ class Index extends Component
         $this->validate();
 
         $base = strtolower($this->moduleName);
+        $modelName = ucfirst($base); // misal: "user" jadi "User"
+        $modelPath = app_path("Models/{$modelName}.php");
+
+        // ❌ Jika model tidak ditemukan, tolak
+        if (!File::exists($modelPath)) {
+            $this->dispatch('showError', "Model '{$modelName}' tidak ditemukan di app/Models.");
+            return;
+        }
+
         $crud = ['create', 'read', 'update', 'delete'];
 
         foreach ($crud as $action) {
@@ -75,6 +89,7 @@ class Index extends Component
         $this->reset(['moduleName']);
         $this->dispatch('showSuccess', 'Permission CRUD berhasil digenerate.');
     }
+
 
     public function delete($id)
     {
@@ -114,5 +129,42 @@ class Index extends Component
             ->values()
             ->take(5) // batasi 5 saran teratas
             ->toArray();
+    }
+
+    public function openAddModal()
+    {
+        $this->reset('manualName');
+        $this->showAddModal = true;
+    }
+
+    // Simpan permission manual
+    public function storeManualPermission()
+    {
+        $this->validate([
+            'manualName' => 'required|string|unique:permissions,name',
+        ]);
+
+        Permission::create(['name' => $this->manualName]);
+
+        $this->showAddModal = false;
+        $this->manualName = null;
+
+        $this->dispatch('showSuccess', 'Permission berhasil ditambahkan.');
+    }
+    // Untuk Ambil Model mana saja yang ada
+    public function loadAvailableModels()
+    {
+        $modelPath = app_path('Models');
+
+        if (!File::exists($modelPath)) return;
+
+        $files = File::files($modelPath);
+
+        $this->availableModels = collect($files)
+            ->filter(fn($file) => $file->getExtension() === 'php')
+            ->map(fn($file) => str_replace('.php', '', $file->getFilename()))
+            ->sort()
+            ->values()
+            ->all();
     }
 }

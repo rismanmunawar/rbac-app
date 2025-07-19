@@ -8,14 +8,13 @@ use App\Livewire\MasterData\Role\Index as RoleIndex;
 use App\Livewire\MasterData\Permission\Index;
 use App\Http\Controllers\AuditLogController;
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
+Route::get('/', fn() => view('welcome'))->name('home');
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+// ⚙️ Settings via Volt
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
@@ -23,24 +22,27 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 });
 
+// 👤 User Management
+Route::middleware(['auth', 'can:user.read'])->group(function () {
+    Route::get('/user', UserIndex::class)->name('users.index');
+});
+Route::middleware(['auth', 'can:user.create'])->get('/users/create', Form::class)->name('user.create');
+Route::middleware(['auth', 'can:users.update'])->get('/users/{id}/edit', Form::class)->name('user.edit');
 
-
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/users', UserIndex::class)->name('users.index');
-    Route::get('/users/create', Form::class)->name('users.create');
-    Route::get('/users/{id}/edit', Form::class)->name('users.edit');
+// 🛡️ Permission Management
+Route::middleware(['auth', 'can:permissions.read'])->group(function () {
+    Route::get('/permissions', Index::class)->name('permissions.index');
 });
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/permissions', Index::class)
-        ->name('permissions.index');
+// 🧩 Role Management
+Route::middleware(['auth', 'can:roles.read'])->group(function () {
+    Route::get('/roles', RoleIndex::class)->name('roles.index');
 });
 
-Route::get('/roles', RoleIndex::class)->middleware(['auth'])->name('roles.index');
-// Route::get('/logs', [AuditLogController::class, 'index'])->name('logs.index')->middleware('can:logs.view');
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/logs', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('logs.index');
+// 🕵️‍♂️ Audit Trail
+Route::middleware(['auth', 'can:logs.read'])->group(function () {
+    Route::get('/logs', [AuditLogController::class, 'index'])->name('logs.index');
 });
 
+// Auth routes
 require __DIR__ . '/auth.php';

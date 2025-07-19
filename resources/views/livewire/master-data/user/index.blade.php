@@ -10,15 +10,12 @@
                     d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.6 3.6a7.5 7.5 0 0013.05 13.05z" />
             </svg>
         </div>
+        @can('user.create')
+            <button wire:click="openModal" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                + Tambah
+            </button>
+        @endcan
 
-        <a href="{{ route('roles.index') }}"
-            class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">
-            Kelola Role
-        </a>
-
-        <button wire:click="openModal" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-            + Tambah
-        </button>
     </div>
 
     {{-- Table --}}
@@ -28,36 +25,55 @@
                 <tr>
                     <th class="px-4 py-2">Nama</th>
                     <th class="px-4 py-2">Role</th>
-                    <th class="px-4 py-2">Aktif</th>
+                    <th class="px-4 py-2">Status</th>
                     <th class="px-4 py-2">Aksi</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($users as $user)
-                <tr class="border-t border-gray-200 dark:border-gray-700">
-                    <td class="px-4 py-2">{{ $user->name }}</td>
-                    <td class="px-4 py-2">{{ $user->roles->pluck('name')->join(', ') ?: '-' }}</td>
-                    <td class="px-4 py-2">
-                        <span class="inline-block px-2 py-1 text-xs rounded {{ $user->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
-                            {{ $user->is_active ? 'Aktif' : 'Nonaktif' }}
-                        </span>
-                    </td>
-                    <td class="px-4 py-2 space-x-2">
-                        <button wire:click="openModal({{ $user->id }})" class="text-blue-600 dark:text-blue-400">Edit</button>
-                        <button wire:click="delete({{ $user->id }})" class="text-red-600 dark:text-red-400"
-                            onclick="return confirm('Yakin ingin hapus user ini?')">Hapus</button>
-                        <button wire:click="openPermissionModal({{ $user->id }})" class="text-yellow-600 dark:text-yellow-400">
-                            Permission
-                        </button>
-                        <button wire:click="showUserDetail({{ $user->id }})"
-                            class="text-gray-600 dark:text-gray-300 hover:text-blue-600">Detail</button>
+                    <tr class="border-t border-gray-200 dark:border-gray-700">
+                        <td class="px-4 py-2">{{ $user->name }}</td>
+                        <td class="px-4 py-2">{{ $user->roles->pluck('name')->join(', ') ?: '-' }}</td>
+                        <td class="px-4 py-2">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" wire:click="toggleActive({{ $user->id }})"
+                                    {{ $user->is_active ? 'checked' : '' }} class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:bg-green-500 transition-colors duration-300 ease-in-out">
+                                </div>
+                                <div
+                                    class="absolute left-0.5 top-0.5 w-5 h-5 bg-white border border-gray-300 rounded-full transition-transform duration-300 ease-in-out peer-checked:translate-x-full dark:border-gray-500">
+                                </div>
+                            </label>
+                        </td>
+                        <td class="px-4 py-2 space-x-2">
+                            @can('users.update')
+                                <button wire:click="openModal({{ $user->id }})"
+                                    class="text-blue-600 dark:text-blue-400">Edit</button>
+                            @endcan
 
-                    </td>
-                </tr>
+                            @can('users.delete')
+                                <button wire:click="delete({{ $user->id }})" class="text-red-600 dark:text-red-400"
+                                    onclick="return confirm('Yakin ingin hapus user ini?')">Hapus</button>
+                            @endcan
+
+                            @can('users.update')
+                                <button wire:click="openPermissionModal({{ $user->id }})"
+                                    class="text-yellow-600 dark:text-yellow-400">
+                                    Permission
+                                </button>
+                            @endcan
+
+                            @can('user.read')
+                                <button wire:click="showUserDetail({{ $user->id }})"
+                                    class="text-gray-600 dark:text-gray-300 hover:text-blue-600">Detail</button>
+                            @endcan
+                        </td>
+                    </tr>
                 @empty
-                <tr>
-                    <td colspan="6" class="px-4 py-2 text-center text-gray-500">Tidak ada data</td>
-                </tr>
+                    <tr>
+                        <td colspan="6" class="px-4 py-2 text-center text-gray-500">Tidak ada data</td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -70,20 +86,20 @@
     @include('livewire.master-data.user.partials.modal-log')
 
     @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        Livewire.on('showSuccess', message => {
-            Swal.fire({
-                icon: 'success',
-                title: 'Berhasil',
-                text: message,
-                toast: true,
-                position: 'top-end',
-                timer: 3000,
-                showConfirmButton: false,
-                timerProgressBar: true,
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            Livewire.on('showSuccess', message => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: message,
+                    toast: true,
+                    position: 'top-end',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    timerProgressBar: true,
+                });
             });
-        });
-    </script>
+        </script>
     @endpush
 </div>
