@@ -23,7 +23,10 @@
         <table class="w-full text-sm text-left">
             <thead class="bg-gray-100 text-gray-700 uppercase">
                 <tr>
+                    <th class="px-4 py-2">NIK</th>
                     <th class="px-4 py-2">Nama</th>
+                    <th class="px-4 py-2">Designation</th>
+                    <th class="px-4 py-2">Plant</th>
                     <th class="px-4 py-2">Email</th>
                     <th class="px-4 py-2">Role</th>
                     <th class="px-4 py-2">Status</th>
@@ -33,11 +36,21 @@
             <tbody class="text-gray-800">
                 @forelse ($users as $user)
                 <tr class="border-t border-gray-200 hover:bg-gray-50 transition">
+
+                    <td class="px-4 py-2 text-text dark:text-text-dark">
+                        {{ $user->nik }}
+                    </td>
                     <td class="px-4 py-2 text-text dark:text-text-dark">
                         {{ $user->name }}
                     </td>
                     <td class="px-4 py-2 text-text dark:text-text-dark">
                         {{ $user->email }}
+                    </td>
+                    <td class="px-4 py-2 text-text dark:text-text-dark">
+                        {{ $user->designation }}
+                    </td>
+                    <td class="px-4 py-2 text-text dark:text-text-dark">
+                        {{ $user->plant }}
                     </td>
                     <td class="px-4 py-2 text-text dark:text-text-dark">
                         {{ $user->roles->pluck('name')->join(', ') ?: '-' }}

@@ -18,7 +18,7 @@ class Index extends Component
     public $search = '';
     public $modalOpen = false;
     public $userId;
-    public $name, $email, $password, $role, $is_active = true;
+    public $name, $email, $password, $role, $nik, $alias, $designation, $phone, $plant, $is_active = true;
     public $roles = [];
     public $allPermissions = [];
     public $userPermissions = [];
@@ -30,16 +30,31 @@ class Index extends Component
     public $lastUserLog;
     public array $directPermissions = [];
     public array $rolePermissions = [];
-
     protected $paginationTheme = 'tailwind';
+
+    // protected function rules()
+    // {
+    //     return [
+    //         'name' => 'required|string|max:100',
+    //         'email' => 'required|email|unique:users,email,' . $this->userId,
+    //         'password' => $this->userId ? 'nullable|min:6' : 'required|min:6',
+    //         'role' => 'required|string|exists:roles,name',
+    //     ];
+    // }
 
     protected function rules()
     {
         return [
-            'name' => 'required|string|max:100',
-            'email' => 'required|email|unique:users,email,' . $this->userId,
-            'password' => $this->userId ? 'nullable|min:6' : 'required|min:6',
-            'role' => 'required|string|exists:roles,name',
+            'nik' => ['nullable', 'string', 'unique:users,nik,' . $this->userId],
+            'name' => ['required', 'string', 'max:255'],
+            'alias' => ['nullable', 'string'],
+            'designation' => ['nullable', 'string'],
+            'phone' => ['nullable', 'string'],
+            'plant' => ['nullable', 'string'],
+            'email' => ['required', 'email', 'unique:users,email,' . $this->userId],
+            'password' => [$this->userId ? 'nullable' : 'required', 'string', 'min:6'],
+            'role' => ['required'],
+            'is_active' => ['boolean'],
         ];
     }
 
@@ -51,32 +66,36 @@ class Index extends Component
     public function openModal($id = null)
     {
         $this->resetValidation();
-        $this->reset(['name', 'email', 'password', 'role', 'userId', 'is_active']);
 
         if ($id) {
             $user = User::findOrFail($id);
+
             $this->userId = $user->id;
+            $this->nik = $user->nik;
+            $this->alias = $user->alias;
             $this->name = $user->name;
+            $this->designation = $user->designation;
+            $this->phone = $user->phone;
+            $this->plant = $user->plant;
             $this->email = $user->email;
+            $this->password = null;
+            $this->role = $user->roles()->pluck('name')->first();
             $this->is_active = $user->is_active;
-            $this->role = $user->roles->pluck('name')->first();
+        } else {
+            // Untuk create user baru
+            $this->reset(['userId', 'nik', 'alias', 'name', 'designation', 'phone', 'plant', 'email', 'password', 'role', 'is_active']);
+            $this->is_active = true; // default aktif
         }
 
         $this->modalOpen = true;
     }
 
+    //  Bersihkan saat close
     public function closeModal()
     {
-        $this->reset([
-            'modalOpen',
-            'userId',
-            'name',
-            'email',
-            'password',
-            'role',
-            'is_active'
-        ]);
+        $this->reset(['modalOpen', 'userId', 'nik', 'alias', 'name', 'designation', 'phone', 'plant', 'email', 'password', 'role', 'is_active']);
     }
+
 
     public function save()
     {
@@ -84,9 +103,15 @@ class Index extends Component
 
         $isNew = !$this->userId;
         $user = $isNew ? new User : User::findOrFail($this->userId);
+
         $user->name = $this->name;
         $user->email = $this->email;
         $user->is_active = $this->is_active;
+        $user->nik = $this->nik;
+        $user->alias = $this->alias;
+        $user->designation = $this->designation;
+        $user->phone = $this->phone;
+        $user->plant = $this->plant;
 
         if ($this->password) {
             $user->password = Hash::make($this->password);
@@ -107,6 +132,10 @@ class Index extends Component
         $this->dispatch('showSuccess', $isNew ? 'User berhasil ditambahkan.' : 'User berhasil diperbarui.');
         $this->closeModal();
     }
+
+
+
+
 
     public function delete($id)
     {
