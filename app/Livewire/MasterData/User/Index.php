@@ -117,9 +117,12 @@ class Index extends Component
             ['data' => $user->toArray()],
             $user
         );
+        $name = $user->name;
         $user->delete();
-        $this->dispatch('showSuccess', 'User dihapus.');
+        $this->dispatch('deleted', "Role '{$name}' berhasil dihapus.");
     }
+    protected $listeners = ['deleteConfirmed' => 'delete'];
+
 
     public function openPermissionModal($id)
     {

@@ -100,15 +100,6 @@ class Index extends Component
         $this->dispatch('showSuccess', "Permission '{$name}' berhasil dihapus.");
     }
 
-
-
-    public function deleteSelected()
-    {
-        Permission::whereIn('id', $this->selectedIds)->delete();
-        $this->reset(['selectedIds', 'selectAll']);
-        $this->dispatch('showSuccess', 'Permission terpilih berhasil dihapus.');
-    }
-
     public $modelSuggestions = [];
 
     public function updatedModuleName($value)

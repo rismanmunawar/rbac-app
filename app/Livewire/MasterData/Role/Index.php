@@ -77,18 +77,24 @@ class Index extends Component
 
         $role = $this->roleId ? Role::find($this->roleId) : $role;
 
-        // Sync permissions
         $role->syncPermissions($this->selectedPermissions);
 
         $this->dispatch('showSuccess', $this->roleId ? 'Role diperbarui.' : 'Role ditambahkan.');
         $this->closeModal();
     }
 
+
+    protected $listeners = ['deleteConfirmed' => 'delete'];
     public function delete($id)
     {
-        Role::find($id)?->delete();
-        $this->dispatch('showSuccess', 'Role dihapus.');
+        $role = Role::findOrFail($id);
+        $name = $role->name;
+        $role->delete();
+
+        $this->dispatch('deleted', "Role '{$name}' berhasil dihapus.");
     }
+
+
 
     public function toggleSelectAll($module)
     {

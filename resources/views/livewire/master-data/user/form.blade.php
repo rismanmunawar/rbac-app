@@ -18,7 +18,7 @@
 
         <div>
             <label class="block mb-1 text-sm font-medium">Password</label>
-            <input type="password" wire:model.defer="password"
+            <input type="password" wire:model.defer="password" autocomplete="password"
                 class="w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 placeholder="{{ $userId ? 'Biarkan kosong jika tidak ingin mengubah' : '' }}" />
             @error('password') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
