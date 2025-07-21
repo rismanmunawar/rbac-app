@@ -18,30 +18,49 @@
             <flux:navlist.group :heading="__('Platform')" class="grid">
                 <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')"
                     wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
+
+            </flux:navlist.group>
+            <flux:navlist.group :heading="__('Master Data')" class="grid">
+                <flux:navlist.item icon="users" :href="route('its.index')"
+                    :current="request()->routeIs('its.index')" wire:navigate>
+                    {{ __('Data IT') }}
+                </flux:navlist.item>
+
+                <flux:navlist.item icon="users" :href="route('roms.index')"
+                    :current="request()->routeIs('roms.index')" wire:navigate>
+                    {{ __('Data ROM') }}
+                </flux:navlist.item>
+
+                <flux:navlist.item icon="users" :href="route('noms.index')"
+                    :current="request()->routeIs('noms.index')" wire:navigate>
+                    {{ __('Data NOM') }}
+                </flux:navlist.item>
+
                 @can('user.read')
-                    <flux:navlist.item icon="users" :href="route('users.index')"
-                        :current="request()->routeIs('users.index')" wire:navigate>
-                        {{ __('Users') }}
-                    </flux:navlist.item>
+                <flux:navlist.item icon="users" :href="route('users.index')"
+                    :current="request()->routeIs('users.index')" wire:navigate>
+                    {{ __('Users') }}
+                </flux:navlist.item>
+                @endcan
+            </flux:navlist.group>
+            <flux:navlist.group :heading="__('Role & Permission')" class="grid">
+                @can('permissions.read')
+                <flux:navlist.item icon="key" :href="route('permissions.index')"
+                    :current="request()->routeIs('permissions.index')" wire:navigate>
+                    {{ __('Permissions') }}
+                </flux:navlist.item>
                 @endcan
                 @can('roles.read')
-                    <flux:navlist.item icon="shield-check" :href="route('roles.index')"
-                        :current="request()->routeIs('roles.index')" wire:navigate>
-                        {{ __('Roles') }}
-                    </flux:navlist.item>
-                @endcan
-
-                @can('permissions.read')
-                    <flux:navlist.item icon="key" :href="route('permissions.index')"
-                        :current="request()->routeIs('permissions.index')" wire:navigate>
-                        {{ __('Permissions') }}
-                    </flux:navlist.item>
+                <flux:navlist.item icon="shield-check" :href="route('roles.index')"
+                    :current="request()->routeIs('roles.index')" wire:navigate>
+                    {{ __('Roles') }}
+                </flux:navlist.item>
                 @endcan
                 @can('logs.read')
-                    <flux:navlist.item icon="" :href="route('logs.index')"
-                        :current="request()->routeIs('logs.index')" wire:navigate>
-                        {{ __('Log Aktivitas') }}
-                    </flux:navlist.item>
+                <flux:navlist.item icon="clock" :href="route('logs.index')"
+                    :current="request()->routeIs('logs.index')" wire:navigate>
+                    {{ __('Log Aktivitas') }}
+                </flux:navlist.item>
                 @endcan
             </flux:navlist.group>
         </flux:navlist>
@@ -88,7 +107,8 @@
 
                 <flux:menu.radio.group>
                     <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>
-                        {{ __('Settings') }}</flux:menu.item>
+                        {{ __('Settings') }}
+                    </flux:menu.item>
                 </flux:menu.radio.group>
 
                 <flux:menu.separator />
@@ -135,7 +155,8 @@
 
                 <flux:menu.radio.group>
                     <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>
-                        {{ __('Settings') }}</flux:menu.item>
+                        {{ __('Settings') }}
+                    </flux:menu.item>
                 </flux:menu.radio.group>
 
                 <flux:menu.separator />

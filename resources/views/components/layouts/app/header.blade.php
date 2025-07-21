@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<!-- <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark"> -->
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @include('partials.head')
 </head>
 
-<body class="min-h-screen bg-white dark:bg-zinc-800">
+<body class="min-h-screen bg-gradient-to-b from-gray-100 via-white to-gray-200 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900 text-gray-800 dark:text-gray-100">
+
     <flux:header container class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
         <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
@@ -16,6 +19,11 @@
         <flux:navbar class="-mb-px max-lg:hidden">
             <flux:navbar.item icon="layout-grid" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
+            </flux:navbar.item>
+
+            <flux:navbar.item icon="users" :href="route('users.index')"
+                :current="request()->routeIs('users.index')" wire:navigate>
+                {{ __('Users') }}
             </flux:navbar.item>
         </flux:navbar>
 
@@ -115,7 +123,10 @@
         </flux:navlist>
     </flux:sidebar>
 
-    {{ $slot }}
+    <div class="max-w-screen-xl mx-auto w-full px-4 py-6">
+        {{ $slot }}
+    </div>
+
 
     @fluxScripts
 </body>

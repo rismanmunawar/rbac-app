@@ -6,14 +6,14 @@
         </div>
 
         <form wire:submit.prevent="save" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-            <x-input label="NIK" wire:model.defer="nik" />
+            <x-input label="NIK" wire:model.defer="nik" required="true" />
             <x-input label="Alias" wire:model.defer="alias" />
-            <x-input label="Nama" wire:model.defer="name" />
+            <x-input label="Nama" wire:model.defer="name" required="true" />
             <x-input label="Designation" wire:model.defer="designation" />
             <x-input label="Phone" wire:model.defer="phone" />
             <x-input label="Plant" wire:model.defer="plant" />
-            <x-input label="Email" type="email" wire:model.defer="email" class="md:col-span-2" />
-            <x-input label="Password" type="password" wire:model.defer="password" autocomplete="password"
+            <x-input label="Email" type="email" wire:model.defer="email" class="md:col-span-2" required="true" />
+            <x-input label="Password" type="password" wire:model.defer="password" autocomplete="password" required="true"
                 placeholder="{{ $userId ? 'Kosongkan jika tidak diubah' : '' }}"
                 class="md:col-span-2" />
 

@@ -133,10 +133,6 @@ class Index extends Component
         $this->closeModal();
     }
 
-
-
-
-
     public function delete($id)
     {
         $user = User::findOrFail($id);

@@ -68,29 +68,39 @@ class Index extends Component
 
     public function generatePermissions()
     {
-        $this->validate();
+        $this->validate([
+            'moduleName' => 'required|string',
+        ]);
 
-        $base = strtolower($this->moduleName);
-        $modelName = ucfirst($base); // misal: "user" jadi "User"
-        $modelPath = app_path("Models/{$modelName}.php");
-
-        // ❌ Jika model tidak ditemukan, tolak
-        if (!File::exists($modelPath)) {
-            $this->dispatch('showError', "Model '{$modelName}' tidak ditemukan di app/Models.");
+        $modelsPath = app_path('Models');
+        if (!File::exists($modelsPath)) {
+            $this->dispatch('showError', "Direktori Models tidak ditemukan.");
             return;
         }
+
+        $files = File::allFiles($modelsPath);
+
+        $match = collect($files)->first(function ($file) {
+            return strtolower(pathinfo($file, PATHINFO_FILENAME)) === strtolower($this->moduleName);
+        });
+
+        if (!$match) {
+            $this->dispatch('showError', "Model '{$this->moduleName}' tidak ditemukan di app/Models (termasuk subfolder).");
+            return;
+        }
+
+        // generate permission name dari nama file model
+        $modelName = strtolower(pathinfo($match, PATHINFO_FILENAME)); // misal: DataIT → datait
 
         $crud = ['create', 'read', 'update', 'delete'];
 
         foreach ($crud as $action) {
-            Permission::firstOrCreate(['name' => "{$base}.{$action}"]);
+            Permission::firstOrCreate(['name' => "{$modelName}.{$action}"]);
         }
 
-        $this->reset(['moduleName']);
+        $this->reset('moduleName');
         $this->dispatch('showSuccess', 'Permission CRUD berhasil digenerate.');
     }
-
-
     public function delete($id)
     {
         $permission = Permission::findOrFail($id);
@@ -112,15 +122,26 @@ class Index extends Component
         $modelsPath = app_path('Models');
         if (!File::exists($modelsPath)) return [];
 
-        $files = File::files($modelsPath);
+        $files = File::allFiles($modelsPath); // cari semua file rekursif
 
         return collect($files)
-            ->map(fn($file) => pathinfo($file, PATHINFO_FILENAME))
-            ->filter(fn($name) => str($name)->lower()->contains(strtolower($input)))
+            ->map(function ($file) use ($modelsPath) {
+                $nameOnly = pathinfo($file, PATHINFO_FILENAME); // contoh: DataIT
+                $relativePath = str($file->getPathname())->after($modelsPath . DIRECTORY_SEPARATOR);
+                $fullClass = str($relativePath)->replace(['/', '.php'], ['\\', '']);
+                return [
+                    'name' => $nameOnly,
+                    'class' => 'App\\Models\\' . $fullClass, // full class path
+                    'base' => strtolower($nameOnly),
+                ];
+            })
+            ->filter(fn($item) => str($item['name'])->lower()->contains(strtolower($input)))
+            ->take(5)
             ->values()
-            ->take(5) // batasi 5 saran teratas
             ->toArray();
     }
+
+
 
     public function openAddModal()
     {
